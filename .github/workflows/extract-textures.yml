@@ -28,6 +28,23 @@ jobs:
       - name: Extract textures
         run: python extractor/extract.py "${{ github.event.inputs.version }}" extracted_textures
 
+      - name: Remove previous release if exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ github.event.inputs.version }}"
+          # Check and delete release by tag
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Deleting previous release for tag $TAG"
+            gh release delete "$TAG" --yes
+          fi
+          # Check and delete tag
+          if git rev-parse "refs/tags/$TAG" &>/dev/null; then
+            echo "Deleting previous tag $TAG"
+            git push origin --delete "$TAG"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
