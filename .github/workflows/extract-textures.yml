@@ -28,42 +28,40 @@ jobs:
       - name: Extract textures
         run: python extractor/extract.py "${{ github.event.inputs.version }}" extracted_textures
 
-      - name: Remove previous release and tag if exists
+      - name: Rename zip file for release
+        run: |
+          if [ -f "extracted_textures/mc-data.zip" ]; then
+            mv extracted_textures/mc-data.zip extracted_textures/mc-texture.zip
+          else
+            echo "Error: mc-data.zip not found. Listing any zip files:"
+            find extracted_textures -name "*.zip" -type f || true
+            exit 1
+          fi
+
+      - name: Remove previous release if exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
+          set -euo pipefail
           TAG="${{ github.event.inputs.version }}"
-
-          # Delete release if exists
           if gh release view "$TAG" &>/dev/null; then
-            echo "Release with tag $TAG exists. Deleting..."
+            echo "Deleting previous release for tag $TAG"
             gh release delete "$TAG" --yes
-          else
-            echo "No existing release for tag $TAG"
           fi
-
-          # Delete tag if exists
-          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
-            echo "Tag $TAG exists. Deleting..."
+          if git rev-parse "refs/tags/$TAG" &>/dev/null; then
+            echo "Deleting previous tag $TAG"
             git push origin --delete "$TAG"
-          else
-            echo "No existing tag $TAG"
           fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ github.event.inputs.version }}"
-          name: "Minecraft Data ${{ github.event.inputs.version }}"
-          body: "Automated release for Minecraft version ${{ github.event.inputs.version }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: "Minecraft Textures ${{ github.event.inputs.version }}"
+          body: |
+            Minecraft texture pack for version ${{ github.event.inputs.version }}
 
-      - name: Upload Zip to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "${{ github.event.inputs.version }}"
-          files: extracted_textures/mc-data.zip
+            Download: [mc-texture.zip](https://github.com/pikacnu/minecraft-texture-extractor/releases/download/${{ github.event.inputs.version }}/mc-texture.zip)
+          files: extracted_textures/mc-texture.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
