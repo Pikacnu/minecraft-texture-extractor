@@ -28,21 +28,27 @@ jobs:
       - name: Extract textures
         run: python extractor/extract.py "${{ github.event.inputs.version }}" extracted_textures
 
-      - name: Remove previous release if exists
+      - name: Remove previous release and tag if exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           TAG="${{ github.event.inputs.version }}"
-          # Check and delete release by tag
+
+          # Delete release if exists
           if gh release view "$TAG" &>/dev/null; then
-            echo "Deleting previous release for tag $TAG"
+            echo "Release with tag $TAG exists. Deleting..."
             gh release delete "$TAG" --yes
+          else
+            echo "No existing release for tag $TAG"
           fi
-          # Check and delete tag
-          if git rev-parse "refs/tags/$TAG" &>/dev/null; then
-            echo "Deleting previous tag $TAG"
+
+          # Delete tag if exists
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+            echo "Tag $TAG exists. Deleting..."
             git push origin --delete "$TAG"
+          else
+            echo "No existing tag $TAG"
           fi
 
       - name: Create Release
