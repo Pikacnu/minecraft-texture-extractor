@@ -1,0 +1,33 @@
+name: Extract Minecraft Textures
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Minecraft version (e.g., 1.20.1)"
+        required: true
+        default: "1.20.1"
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install -r extractor/requirements.txt
+
+      - name: Extract textures
+        run: python extractor/extract.py "${{ github.event.inputs.version }}" extracted_textures
+
+      - name: Upload extracted textures
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-textures-${{ github.event.inputs.version }}
+          path: extracted_textures
